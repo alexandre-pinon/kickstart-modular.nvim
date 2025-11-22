@@ -314,7 +314,6 @@ return {
 
           bashls = {},
 
-          phpactor = {},
           -- mesonlsp = {},
         },
         -- This table contains config for all language servers that are *not* installed via Mason.
@@ -344,9 +343,6 @@ return {
         -- bash
         'shellcheck',
         'shfmt',
-        -- php
-        'phpcs',
-        'php-cs-fixer',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
