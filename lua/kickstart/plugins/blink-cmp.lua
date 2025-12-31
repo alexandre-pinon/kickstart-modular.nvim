@@ -84,9 +84,11 @@ return {
           'lsp',
           'path',
           'snippets',
-          'lazydev',
           'buffer',
           'copilot',
+        },
+        per_filetype = {
+          lua = { inherit_defaults = true, 'lazydev' },
         },
         providers = {
           lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
