@@ -19,6 +19,56 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 -- Close current buffer
 vim.keymap.set('n', '<leader>Q', ':bd<CR>', { desc = 'Close current buffer' })
 
+-- Rename current file (with LSP import updates if available)
+vim.keymap.set('n', '<leader>Fr', function()
+  local old_name = vim.api.nvim_buf_get_name(0)
+  local old_name_tail = vim.fn.fnamemodify(old_name, ':t')
+
+  vim.ui.input({
+    prompt = 'Rename file: ',
+    default = old_name_tail,
+  }, function(new_name_tail)
+    if not new_name_tail or new_name_tail == '' or new_name_tail == old_name_tail then
+      return
+    end
+
+    local dir = vim.fn.fnamemodify(old_name, ':h')
+    local new_name = dir .. '/' .. new_name_tail
+
+    -- Rename file on disk first
+    local ok = vim.uv.fs_rename(old_name, new_name)
+    if not ok then
+      vim.notify('Failed to rename file on disk', vim.log.levels.ERROR)
+      return
+    end
+
+    -- Update LSP workspace if supported (Neovim 0.11+ syntax)
+    local clients = vim.lsp.get_clients { bufnr = 0 }
+    for _, client in ipairs(clients) do
+      if client:supports_method 'workspace/willRenameFiles' then
+        local params = {
+          files = {
+            {
+              oldUri = vim.uri_from_fname(old_name),
+              newUri = vim.uri_from_fname(new_name),
+            },
+          },
+        }
+        local resp = client:request_sync('workspace/willRenameFiles', params, 1000, 0)
+        if resp and resp.result then
+          vim.lsp.util.apply_workspace_edit(resp.result, client.offset_encoding)
+        end
+      end
+    end
+
+    -- Update buffer
+    vim.cmd.saveas(new_name)
+    vim.fn.delete(old_name)
+
+    vim.notify('Renamed: ' .. old_name_tail .. ' -> ' .. new_name_tail, vim.log.levels.INFO)
+  end)
+end, { desc = '[F]ile [R]ename' })
+
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
 -- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
