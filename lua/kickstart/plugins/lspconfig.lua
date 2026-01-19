@@ -90,7 +90,25 @@ return {
           map('gra', vim.lsp.buf.code_action, '[G]oto Code [A]ction', { 'n', 'x' })
 
           -- Find references for the word under your cursor.
-          map('grr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
+          map('grr', function()
+            require('telescope.builtin').lsp_references {
+              include_declaration = false,
+              entry_maker = function(entry)
+                local uri = entry.uri or vim.uri_from_fname(entry.filename)
+                local bufnr = vim.uri_to_bufnr(uri)
+
+                vim.fn.bufload(bufnr)
+
+                local line_content = vim.api.nvim_buf_get_lines(bufnr, entry.lnum - 1, entry.lnum, false)[1] or ''
+
+                if line_content:match '^%s*import' or line_content:match '^%s*}%s*from' then
+                  return nil
+                end
+
+                return require('telescope.make_entry').gen_from_quickfix()(entry)
+              end,
+            }
+          end, '[G]oto [R]eferences')
 
           -- Jump to the implementation of the word under your cursor.
           --  Useful when your language has ways of declaring types without an actual implementation.
