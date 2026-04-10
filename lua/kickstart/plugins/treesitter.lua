@@ -18,6 +18,8 @@ return {
         'query',
         'vim',
         'vimdoc',
+        'typescript',
+        'tsx',
       }
       ts.install(parsers)
 
